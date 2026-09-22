@@ -1,1 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поварская Раздача</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
 
+    <div class="container">
+        <h1>🍳 Поварская Раздача</h1>
+
+        <p class="subtitle">Испытай удачу и получи свой приз!</p>
+
+        <div class="roulette">
+            <div class="pointer">▼</div>
+            <div id="prize">🎁</div>
+        </div>
+
+        <button id="spinButton">🎰 КРУТИТЬ</button>
+
+        <div class="info">
+            <p>🎁 Бесплатная попытка — раз в 24 часа</p>
+            <p id="status">Готов к раздаче!</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
