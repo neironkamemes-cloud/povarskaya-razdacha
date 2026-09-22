@@ -1,0 +1,86 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #fff3d6, #ffd6a5);
+    color: #3b2415;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 420px;
+    padding: 25px;
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 10px;
+    font-size: 30px;
+}
+
+.subtitle {
+    margin-bottom: 30px;
+    font-size: 16px;
+}
+
+.roulette {
+    position: relative;
+    width: 230px;
+    height: 230px;
+    margin: 0 auto 30px;
+    border-radius: 50%;
+    background: conic-gradient(
+        #ff7675 0deg 51deg,
+        #74b9ff 51deg 102deg,
+        #55efc4 102deg 153deg,
+        #ffeaa7 153deg 204deg,
+        #a29bfe 204deg 255deg,
+        #fd79a8 255deg 306deg,
+        #81ecec 306deg 360deg
+    );
+    border: 8px solid white;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#prize {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 45px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.pointer {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 30px;
+    z-index: 2;
+}
+
+button {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    background: #ff6b35;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #c94d21
