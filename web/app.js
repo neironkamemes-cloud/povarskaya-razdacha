@@ -6,17 +6,46 @@ tg.expand();
 const spinButton = document.getElementById("spinButton");
 const prizeElement = document.getElementById("prize");
 const statusElement = document.getElementById("status");
+const rouletteElement = document.querySelector(".roulette");
 
-const COOLDOWN = 24 * 60 * 60; // 24 часа
+const COOLDOWN = 24 * 60 * 60;
 
 let countdownInterval = null;
 let spinning = false;
+let currentRotation = 0;
 
 const userId = tg.initDataUnsafe?.user?.id || 0;
 
 
 // ==========================================
-// ПОЛУЧЕНИЕ EMOJI ПРИЗА
+// ПРИЗЫ ДЛЯ ВИЗУАЛЬНОЙ РУЛЕТКИ
+// 15 СЕКТОРОВ
+// ==========================================
+
+const rouletteItems = [
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "🐻",
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "❌",
+    "❌"
+];
+
+const SECTOR_COUNT = rouletteItems.length;
+const SECTOR_ANGLE = 360 / SECTOR_COUNT;
+
+
+// ==========================================
+// EMOJI ПРИЗА
 // ==========================================
 
 function getPrizeEmoji(prize) {
@@ -54,7 +83,7 @@ function formatTime(seconds) {
 
 
 // ==========================================
-// ТАЙМЕР ДО СЛЕДУЮЩЕЙ ПРОКРУТКИ
+// КУЛДАУН
 // ==========================================
 
 function startCountdown(seconds) {
@@ -104,7 +133,6 @@ function disableSpin() {
     spinButton.textContent = "⏳ Ожидайте...";
 }
 
-
 function enableSpin() {
     spinButton.disabled = false;
     spinButton.textContent = "🎰 КРУТИТЬ";
@@ -112,83 +140,197 @@ function enableSpin() {
 
 
 // ==========================================
-// АНИМАЦИЯ РУЛЕТКИ
+// СОЗДАЁМ НАСТОЯЩИЕ СЕКТОРА
 // ==========================================
 
-function spinAnimation(finalEmoji) {
+function createRouletteWheel() {
+    if (!rouletteElement) {
+        return;
+    }
+
+    // Удаляем старое содержимое колеса,
+    // кроме указателя и центрального блока
+    const oldWheel =
+        rouletteElement.querySelector(".roulette-wheel");
+
+    if (oldWheel) {
+        oldWheel.remove();
+    }
+
+    const wheel =
+        document.createElement("div");
+
+    wheel.className = "roulette-wheel";
+
+    wheel.style.position = "absolute";
+    wheel.style.inset = "0";
+    wheel.style.borderRadius = "50%";
+    wheel.style.overflow = "hidden";
+    wheel.style.transform =
+        `rotate(${currentRotation}deg)`;
+
+    // Цвета секторов
+    const colors = [
+        "#ff7675",
+        "#74b9ff",
+        "#55efc4",
+        "#ffeaa7",
+        "#a29bfe",
+        "#fd79a8",
+        "#81ecec"
+    ];
+
+    // Создаём секторные подписи
+    rouletteItems.forEach((item, index) => {
+        const sector =
+            document.createElement("div");
+
+        sector.className =
+            "roulette-sector";
+
+        sector.textContent = item;
+
+        const angle =
+            index * SECTOR_ANGLE;
+
+        sector.style.position = "absolute";
+        sector.style.left = "50%";
+        sector.style.top = "50%";
+        sector.style.width = "50%";
+        sector.style.height = "50%";
+        sector.style.transformOrigin = "0 0";
+
+        sector.style.transform =
+            `rotate(${angle}deg) skewY(${90 - SECTOR_ANGLE}deg)`;
+
+        sector.style.background =
+            colors[index % colors.length];
+
+        sector.style.display = "flex";
+        sector.style.alignItems = "center";
+        sector.style.justifyContent = "center";
+
+        sector.style.fontSize = "24px";
+        sector.style.fontWeight = "bold";
+
+        sector.style.border =
+            "1px solid rgba(255,255,255,0.7)";
+
+        wheel.appendChild(sector);
+    });
+
+    rouletteElement.insertBefore(
+        wheel,
+        rouletteElement.firstChild
+    );
+}
+
+
+// ==========================================
+// НАХОДИМ СЕКТОР ПРИЗА
+// ==========================================
+
+function findPrizeSector(finalEmoji) {
+    const possibleIndexes = [];
+
+    rouletteItems.forEach((item, index) => {
+        if (item === finalEmoji) {
+            possibleIndexes.push(index);
+        }
+    });
+
+    if (possibleIndexes.length === 0) {
+        return 0;
+    }
+
+    return possibleIndexes[
+        Math.floor(
+            Math.random() *
+            possibleIndexes.length
+        )
+    ];
+}
+
+
+// ==========================================
+// ВРАЩЕНИЕ НАСТОЯЩЕГО КОЛЕСА
+// ==========================================
+
+function spinWheel(finalEmoji) {
     return new Promise((resolve) => {
 
-        const symbols = [
-            "❌",
-            "❌",
-            "❌",
-            "❌",
-            "🐻"
-        ];
-
-        const totalSteps = 40;
-
-        let step = 0;
-
-        function animate() {
-
-            step++;
-
-            // Пока крутимся
-            if (step < totalSteps) {
-
-                const randomIndex =
-                    Math.floor(
-                        Math.random() * symbols.length
-                    );
-
-                prizeElement.textContent =
-                    symbols[randomIndex];
-
-                // Сначала быстро
-                // Потом медленно
-                let delay;
-
-                if (step < 15) {
-                    delay = 50;
-                }
-                else if (step < 28) {
-                    delay = 80;
-                }
-                else {
-                    delay =
-                        120 +
-                        (step - 28) * 40;
-                }
-
-                setTimeout(
-                    animate,
-                    delay
-                );
-
-                return;
-            }
-
-            // ==================================
-            // ФИНАЛЬНЫЙ РЕЗУЛЬТАТ
-            // ==================================
-
-            prizeElement.textContent =
-                finalEmoji;
-
-            setTimeout(
-                resolve,
-                700
-            );
+        if (!rouletteElement) {
+            resolve();
+            return;
         }
 
-        animate();
+        const wheel =
+            rouletteElement.querySelector(
+                ".roulette-wheel"
+            );
+
+        if (!wheel) {
+            resolve();
+            return;
+        }
+
+        const targetSector =
+            findPrizeSector(finalEmoji);
+
+        /*
+         * Центр выбранного сектора.
+         *
+         * Нам нужно повернуть колесо так,
+         * чтобы выбранный сектор оказался
+         * под верхним указателем.
+         */
+
+        const sectorCenter =
+            targetSector * SECTOR_ANGLE +
+            SECTOR_ANGLE / 2;
+
+        const targetAngle =
+            360 - sectorCenter;
+
+        const fullTurns = 6;
+
+        const normalizedRotation =
+            ((currentRotation % 360) + 360) % 360;
+
+        const delta =
+            fullTurns * 360 +
+            targetAngle -
+            normalizedRotation;
+
+        currentRotation += delta;
+
+        wheel.style.transition =
+            "transform 5.5s cubic-bezier(0.12, 0.72, 0.08, 1)";
+
+        wheel.style.transform =
+            `rotate(${currentRotation}deg)`;
+
+        setTimeout(() => {
+
+            // Убираем transition,
+            // чтобы следующий запуск был корректным
+            wheel.style.transition = "none";
+
+            currentRotation =
+                ((currentRotation % 360) + 360) % 360;
+
+            wheel.style.transform =
+                `rotate(${currentRotation}deg)`;
+
+            resolve();
+
+        }, 5700);
     });
 }
 
 
 // ==========================================
-// ЗАГРУЗКА СОСТОЯНИЯ ПОЛЬЗОВАТЕЛЯ
+// ЗАГРУЗКА СОСТОЯНИЯ
 // ==========================================
 
 async function loadUserState() {
@@ -219,11 +361,6 @@ async function loadUserState() {
                 "Ошибка получения состояния"
             );
         }
-
-
-        // ==================================
-        // ПРОВЕРЯЕМ КУЛДАУН
-        // ==================================
 
         if (data.last_spin) {
 
@@ -257,11 +394,6 @@ async function loadUserState() {
             }
         }
 
-
-        // ==================================
-        // МОЖНО КРУТИТЬ
-        // ==================================
-
         enableSpin();
 
         statusElement.textContent =
@@ -281,7 +413,7 @@ async function loadUserState() {
 
 
 // ==========================================
-// КНОПКА КРУТИТЬ
+// КРУТИТЬ
 // ==========================================
 
 spinButton.addEventListener(
@@ -299,13 +431,10 @@ spinButton.addEventListener(
         statusElement.textContent =
             "🎰 Рулетка крутится...";
 
-
         try {
 
-            // ==================================
-            // ПОЛУЧАЕМ РЕЗУЛЬТАТ ОТ СЕРВЕРА
-            // ==================================
-
+            // Получаем настоящий результат
+            // с сервера
             const response =
                 await fetch(
                     "/api/spin",
@@ -323,27 +452,20 @@ spinButton.addEventListener(
                     }
                 );
 
-
             const data =
                 await response.json();
 
 
-            // ==================================
-            // ОШИБКА / КУЛДАУН
-            // ==================================
-
+            // Ошибка / кулдаун
             if (!response.ok) {
 
-                if (
-                    data.remaining
-                ) {
+                if (data.remaining) {
 
                     startCountdown(
                         data.remaining
                     );
 
-                }
-                else {
+                } else {
 
                     statusElement.textContent =
                         data.error ||
@@ -358,52 +480,42 @@ spinButton.addEventListener(
             }
 
 
-            // ==================================
-            // НАСТОЯЩИЙ РЕЗУЛЬТАТ
-            // ==================================
-
+            // Настоящий приз от main.py
             const prize =
                 data.prize ||
                 "❌ Ничего";
 
             const finalEmoji =
-                getPrizeEmoji(
-                    prize
-                );
+                getPrizeEmoji(prize);
 
 
             // ==================================
-            // КРУТИМ РУЛЕТКУ
+            // ЗАПУСКАЕМ НАСТОЯЩЕЕ КОЛЕСО
             // ==================================
 
-            await spinAnimation(
+            await spinWheel(
                 finalEmoji
             );
 
 
-            // ==================================
-            // ПОКАЗЫВАЕМ РЕЗУЛЬТАТ
-            // ==================================
+            // Показываем результат
+            prizeElement.textContent =
+                finalEmoji;
 
-            if (
-                prize.includes("🐻")
-            ) {
+
+            if (prize.includes("🐻")) {
 
                 statusElement.textContent =
                     "🎉 Тебе выпал Медведь! 🐻";
 
-            }
-            else {
+            } else {
 
                 statusElement.textContent =
                     "😔 Увы, в этот раз ничего.";
             }
 
 
-            // ==================================
-            // ЗАПУСКАЕМ 24 ЧАСА
-            // ==================================
-
+            // Кулдаун
             startCountdown(
                 data.remaining ||
                 COOLDOWN
@@ -420,14 +532,15 @@ spinButton.addEventListener(
             enableSpin();
         }
 
-
         spinning = false;
     }
 );
 
 
 // ==========================================
-// ЗАПУСК MINI APP
+// ЗАПУСК
 // ==========================================
+
+createRouletteWheel();
 
 loadUserState();
