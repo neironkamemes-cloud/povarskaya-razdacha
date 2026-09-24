@@ -437,8 +437,6 @@ function spinWheel(finalEmoji) {
         };
     });
 }
-            
-
             /*
              * ВРАЩАЕМ ИМЕННО ВЕСЬ КРУГ
              */
