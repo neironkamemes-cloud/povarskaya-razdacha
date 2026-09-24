@@ -18,7 +18,6 @@ const userId = tg.initDataUnsafe?.user?.id || 0;
 
 
 // ==========================================
-// ПРИЗЫ ДЛЯ ВИЗУАЛЬНОЙ РУЛЕТКИ
 // 15 СЕКТОРОВ
 // ==========================================
 
@@ -45,15 +44,11 @@ const SECTOR_ANGLE = 360 / SECTOR_COUNT;
 
 
 // ==========================================
-// EMOJI ПРИЗА
+// ПРИЗ
 // ==========================================
 
 function getPrizeEmoji(prize) {
-    if (!prize) {
-        return "❌";
-    }
-
-    if (prize.includes("🐻")) {
+    if (prize && String(prize).includes("🐻")) {
         return "🐻";
     }
 
@@ -62,7 +57,7 @@ function getPrizeEmoji(prize) {
 
 
 // ==========================================
-// ФОРМАТ ВРЕМЕНИ
+// ВРЕМЯ
 // ==========================================
 
 function formatTime(seconds) {
@@ -83,7 +78,22 @@ function formatTime(seconds) {
 
 
 // ==========================================
-// КУЛДАУН
+// КНОПКА
+// ==========================================
+
+function disableSpin() {
+    spinButton.disabled = true;
+    spinButton.textContent = "⏳ Ожидайте...";
+}
+
+function enableSpin() {
+    spinButton.disabled = false;
+    spinButton.textContent = "🎰 КРУТИТЬ";
+}
+
+
+// ==========================================
+// КУЛДАУН 24 ЧАСА
 // ==========================================
 
 function startCountdown(seconds) {
@@ -98,7 +108,7 @@ function startCountdown(seconds) {
 
     disableSpin();
 
-    function updateTimer() {
+    function update() {
         if (remaining <= 0) {
             clearInterval(countdownInterval);
 
@@ -117,41 +127,70 @@ function startCountdown(seconds) {
         remaining--;
     }
 
-    updateTimer();
+    update();
 
     countdownInterval =
-        setInterval(updateTimer, 1000);
+        setInterval(update, 1000);
 }
 
 
 // ==========================================
-// КНОПКА
+// ЦВЕТА КОЛЕСА
 // ==========================================
 
-function disableSpin() {
-    spinButton.disabled = true;
-    spinButton.textContent = "⏳ Ожидайте...";
-}
+function createGradient() {
 
-function enableSpin() {
-    spinButton.disabled = false;
-    spinButton.textContent = "🎰 КРУТИТЬ";
+    const colors = [
+        "#ff7675",
+        "#74b9ff",
+        "#55efc4",
+        "#ffeaa7",
+        "#a29bfe",
+        "#fd79a8",
+        "#81ecec",
+        "#fab1a0",
+        "#70a1ff",
+        "#7bed9f",
+        "#eccc68",
+        "#ff6b81",
+        "#70a1ff",
+        "#7bed9f",
+        "#ff9ff3"
+    ];
+
+    const parts = [];
+
+    for (let i = 0; i < SECTOR_COUNT; i++) {
+
+        const start =
+            i * SECTOR_ANGLE;
+
+        const end =
+            (i + 1) * SECTOR_ANGLE;
+
+        parts.push(
+            `${colors[i]} ${start}deg ${end}deg`
+        );
+    }
+
+    return `conic-gradient(${parts.join(",")})`;
 }
 
 
 // ==========================================
-// СОЗДАЁМ НАСТОЯЩИЕ СЕКТОРА
+// СОЗДАНИЕ КОЛЕСА
 // ==========================================
 
 function createRouletteWheel() {
+
     if (!rouletteElement) {
         return;
     }
 
-    // Удаляем старое содержимое колеса,
-    // кроме указателя и центрального блока
     const oldWheel =
-        rouletteElement.querySelector(".roulette-wheel");
+        rouletteElement.querySelector(
+            ".roulette-wheel"
+        );
 
     if (oldWheel) {
         oldWheel.remove();
@@ -160,64 +199,118 @@ function createRouletteWheel() {
     const wheel =
         document.createElement("div");
 
-    wheel.className = "roulette-wheel";
+    wheel.className =
+        "roulette-wheel";
 
-    wheel.style.position = "absolute";
-    wheel.style.inset = "0";
-    wheel.style.borderRadius = "50%";
-    wheel.style.overflow = "hidden";
+    wheel.style.position =
+        "absolute";
+
+    wheel.style.inset =
+        "0";
+
+    wheel.style.width =
+        "100%";
+
+    wheel.style.height =
+        "100%";
+
+    wheel.style.borderRadius =
+        "50%";
+
+    wheel.style.overflow =
+        "hidden";
+
+    wheel.style.transformOrigin =
+        "50% 50%";
+
+    wheel.style.background =
+        createGradient();
+
+    wheel.style.willChange =
+        "transform";
+
     wheel.style.transform =
-        `rotate(${currentRotation}deg)`;
+        "rotate(0deg)";
 
-    // Цвета секторов
-    const colors = [
-        "#ff7675",
-        "#74b9ff",
-        "#55efc4",
-        "#ffeaa7",
-        "#a29bfe",
-        "#fd79a8",
-        "#81ecec"
-    ];
+    wheel.style.zIndex =
+        "1";
 
-    // Создаём секторные подписи
-    rouletteItems.forEach((item, index) => {
-        const sector =
-            document.createElement("div");
 
-        sector.className =
-            "roulette-sector";
+    // ======================================
+    // ЭМОДЗИ ВНУТРИ СЕКТОРОВ
+    // ======================================
 
-        sector.textContent = item;
+    rouletteItems.forEach(
+        (item, index) => {
 
-        const angle =
-            index * SECTOR_ANGLE;
+            const label =
+                document.createElement("div");
 
-        sector.style.position = "absolute";
-        sector.style.left = "50%";
-        sector.style.top = "50%";
-        sector.style.width = "50%";
-        sector.style.height = "50%";
-        sector.style.transformOrigin = "0 0";
+            label.className =
+                "roulette-sector";
 
-        sector.style.transform =
-            `rotate(${angle}deg) skewY(${90 - SECTOR_ANGLE}deg)`;
+            label.textContent =
+                item;
 
-        sector.style.background =
-            colors[index % colors.length];
+            const angle =
+                index * SECTOR_ANGLE +
+                SECTOR_ANGLE / 2;
 
-        sector.style.display = "flex";
-        sector.style.alignItems = "center";
-        sector.style.justifyContent = "center";
 
-        sector.style.fontSize = "24px";
-        sector.style.fontWeight = "bold";
+            label.style.position =
+                "absolute";
 
-        sector.style.border =
-            "1px solid rgba(255,255,255,0.7)";
+            label.style.left =
+                "50%";
 
-        wheel.appendChild(sector);
-    });
+            label.style.top =
+                "50%";
+
+            label.style.width =
+                "44%";
+
+            label.style.height =
+                "44%";
+
+            label.style.marginLeft =
+                "-22%";
+
+            label.style.marginTop =
+                "-22%";
+
+            label.style.transform =
+                `rotate(${angle}deg) translateY(-92px)`;
+
+            label.style.display =
+                "flex";
+
+            label.style.alignItems =
+                "center";
+
+            label.style.justifyContent =
+                "center";
+
+            label.style.fontSize =
+                "24px";
+
+            label.style.fontWeight =
+                "bold";
+
+            label.style.lineHeight =
+                "1";
+
+            label.style.pointerEvents =
+                "none";
+
+            label.style.zIndex =
+                "2";
+
+            wheel.appendChild(
+                label
+            );
+        }
+    );
+
 
     rouletteElement.insertBefore(
         wheel,
@@ -227,105 +320,142 @@ function createRouletteWheel() {
 
 
 // ==========================================
-// НАХОДИМ СЕКТОР ПРИЗА
+// ИЩЕМ СЕКТОР С ПРИЗОМ
 // ==========================================
 
 function findPrizeSector(finalEmoji) {
-    const possibleIndexes = [];
 
-    rouletteItems.forEach((item, index) => {
-        if (item === finalEmoji) {
-            possibleIndexes.push(index);
+    const indexes = [];
+
+    rouletteItems.forEach(
+        (item, index) => {
+
+            if (item === finalEmoji) {
+                indexes.push(index);
+            }
         }
-    });
+    );
 
-    if (possibleIndexes.length === 0) {
+    if (!indexes.length) {
         return 0;
     }
 
-    return possibleIndexes[
+    return indexes[
         Math.floor(
             Math.random() *
-            possibleIndexes.length
+            indexes.length
         )
     ];
 }
 
 
 // ==========================================
-// ВРАЩЕНИЕ НАСТОЯЩЕГО КОЛЕСА
+// НАСТОЯЩЕЕ ВРАЩЕНИЕ КОЛЕСА
 // ==========================================
 
 function spinWheel(finalEmoji) {
-    return new Promise((resolve) => {
 
-        if (!rouletteElement) {
-            resolve();
-            return;
-        }
+    return new Promise(
+        (resolve) => {
 
-        const wheel =
-            rouletteElement.querySelector(
-                ".roulette-wheel"
-            );
+            const wheel =
+                rouletteElement?.querySelector(
+                    ".roulette-wheel"
+                );
 
-        if (!wheel) {
-            resolve();
-            return;
-        }
+            if (!wheel) {
+                resolve();
+                return;
+            }
 
-        const targetSector =
-            findPrizeSector(finalEmoji);
 
-        /*
-         * Центр выбранного сектора.
-         *
-         * Нам нужно повернуть колесо так,
-         * чтобы выбранный сектор оказался
-         * под верхним указателем.
-         */
+            const targetSector =
+                findPrizeSector(
+                    finalEmoji
+                );
 
-        const sectorCenter =
-            targetSector * SECTOR_ANGLE +
-            SECTOR_ANGLE / 2;
 
-        const targetAngle =
-            360 - sectorCenter;
+            const sectorCenter =
+                targetSector *
+                SECTOR_ANGLE +
+                SECTOR_ANGLE / 2;
 
-        const fullTurns = 6;
 
-        const normalizedRotation =
-            ((currentRotation % 360) + 360) % 360;
+            /*
+             * Сектор должен остановиться
+             * под верхним указателем.
+             */
 
-        const delta =
-            fullTurns * 360 +
-            targetAngle -
-            normalizedRotation;
+            const targetAngle =
+                360 -
+                sectorCenter;
 
-        currentRotation += delta;
 
-        wheel.style.transition =
-            "transform 5.5s cubic-bezier(0.12, 0.72, 0.08, 1)";
+            /*
+             * 7 полных оборотов.
+             */
 
-        wheel.style.transform =
-            `rotate(${currentRotation}deg)`;
+            const fullTurns =
+                7 * 360;
 
-        setTimeout(() => {
 
-            // Убираем transition,
-            // чтобы следующий запуск был корректным
-            wheel.style.transition = "none";
+            const normalized =
+                (
+                    currentRotation % 360 +
+                    360
+                ) % 360;
 
-            currentRotation =
-                ((currentRotation % 360) + 360) % 360;
+
+            let delta =
+                fullTurns +
+                targetAngle -
+                normalized;
+
+
+            if (delta < fullTurns) {
+                delta += 360;
+            }
+
+
+            currentRotation +=
+                delta;
+
+
+            /*
+             * ВРАЩАЕМ ИМЕННО ВЕСЬ КРУГ
+             */
+
+            wheel.style.transition =
+                "transform 6s cubic-bezier(0.12, 0.72, 0.08, 1)";
 
             wheel.style.transform =
                 `rotate(${currentRotation}deg)`;
 
-            resolve();
 
-        }, 5700);
-    });
+            setTimeout(
+                () => {
+
+                    currentRotation =
+                        (
+                            currentRotation % 360 +
+                            360
+                        ) % 360;
+
+
+                    wheel.style.transition =
+                        "none";
+
+                    wheel.style.transform =
+                        `rotate(${currentRotation}deg)`;
+
+
+                    resolve();
+
+                },
+                6200
+            );
+        }
+    );
 }
 
 
@@ -345,22 +475,28 @@ async function loadUserState() {
         return;
     }
 
+
     try {
 
         const response =
             await fetch(
                 "/api/user/" +
-                encodeURIComponent(userId)
+                encodeURIComponent(
+                    userId
+                )
             );
+
 
         const data =
             await response.json();
+
 
         if (!response.ok) {
             throw new Error(
                 "Ошибка получения состояния"
             );
         }
+
 
         if (data.last_spin) {
 
@@ -369,12 +505,16 @@ async function loadUserState() {
                     Date.now() / 1000
                 );
 
+
             const remaining =
                 COOLDOWN -
                 (
                     now -
-                    Number(data.last_spin)
+                    Number(
+                        data.last_spin
+                    )
                 );
+
 
             if (remaining > 0) {
 
@@ -386,6 +526,7 @@ async function loadUserState() {
                         );
                 }
 
+
                 startCountdown(
                     remaining
                 );
@@ -393,6 +534,7 @@ async function loadUserState() {
                 return;
             }
         }
+
 
         enableSpin();
 
@@ -413,7 +555,7 @@ async function loadUserState() {
 
 
 // ==========================================
-// КРУТИТЬ
+// КНОПКА КРУТИТЬ
 // ==========================================
 
 spinButton.addEventListener(
@@ -424,17 +566,18 @@ spinButton.addEventListener(
             return;
         }
 
+
         spinning = true;
 
         disableSpin();
 
+
         statusElement.textContent =
             "🎰 Рулетка крутится...";
 
+
         try {
 
-            // Получаем настоящий результат
-            // с сервера
             const response =
                 await fetch(
                     "/api/spin",
@@ -452,11 +595,15 @@ spinButton.addEventListener(
                     }
                 );
 
+
             const data =
                 await response.json();
 
 
-            // Ошибка / кулдаун
+            // ==================================
+            // КУЛДАУН
+            // ==================================
+
             if (!response.ok) {
 
                 if (data.remaining) {
@@ -465,7 +612,8 @@ spinButton.addEventListener(
                         data.remaining
                     );
 
-                } else {
+                }
+                else {
 
                     statusElement.textContent =
                         data.error ||
@@ -474,23 +622,30 @@ spinButton.addEventListener(
                     enableSpin();
                 }
 
+
                 spinning = false;
 
                 return;
             }
 
 
-            // Настоящий приз от main.py
+            // ==================================
+            // ПРИЗ С СЕРВЕРА
+            // ==================================
+
             const prize =
                 data.prize ||
                 "❌ Ничего";
 
+
             const finalEmoji =
-                getPrizeEmoji(prize);
+                getPrizeEmoji(
+                    prize
+                );
 
 
             // ==================================
-            // ЗАПУСКАЕМ НАСТОЯЩЕЕ КОЛЕСО
+            // ЗАПУСК ВРАЩЕНИЯ
             // ==================================
 
             await spinWheel(
@@ -498,24 +653,35 @@ spinButton.addEventListener(
             );
 
 
-            // Показываем результат
+            // ==================================
+            // РЕЗУЛЬТАТ
+            // ==================================
+
             prizeElement.textContent =
                 finalEmoji;
 
 
-            if (prize.includes("🐻")) {
+            if (
+                String(prize).includes(
+                    "🐻"
+                )
+            ) {
 
                 statusElement.textContent =
                     "🎉 Тебе выпал Медведь! 🐻";
 
-            } else {
+            }
+            else {
 
                 statusElement.textContent =
                     "😔 Увы, в этот раз ничего.";
             }
 
 
-            // Кулдаун
+            // ==================================
+            // КУЛДАУН
+            // ==================================
+
             startCountdown(
                 data.remaining ||
                 COOLDOWN
@@ -531,6 +697,7 @@ spinButton.addEventListener(
 
             enableSpin();
         }
+
 
         spinning = false;
     }
