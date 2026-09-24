@@ -437,9 +437,7 @@ function spinWheel(finalEmoji) {
         };
     });
 }
-            currentRotation +=
-                delta;
-
+            
 
             /*
              * ВРАЩАЕМ ИМЕННО ВЕСЬ КРУГ
