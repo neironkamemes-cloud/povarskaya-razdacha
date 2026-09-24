@@ -354,69 +354,89 @@ function findPrizeSector(finalEmoji) {
 // ==========================================
 
 function spinWheel(finalEmoji) {
+    return new Promise((resolve) => {
+        const wheel = rouletteElement?.querySelector(".roulette-wheel");
 
-    return new Promise(
-        (resolve) => {
+        if (!wheel) {
+            resolve();
+            return;
+        }
 
-            const wheel =
-                rouletteElement?.querySelector(
-                    ".roulette-wheel"
-                );
+        const targetSector = findPrizeSector(finalEmoji);
 
-            if (!wheel) {
-                resolve();
-                return;
+        const sectorCenter =
+            targetSector * SECTOR_ANGLE +
+            SECTOR_ANGLE / 2;
+
+        const targetAngle = 360 - sectorCenter;
+
+        const fullTurns = 7 * 360;
+
+        const current =
+            ((currentRotation % 360) + 360) % 360;
+
+        let delta =
+            fullTurns +
+            targetAngle -
+            current;
+
+        if (delta < fullTurns) {
+            delta += 360;
+        }
+
+        const startRotation = currentRotation;
+        const endRotation = currentRotation + delta;
+
+        // Сбрасываем старую анимацию
+        wheel.getAnimations().forEach(animation => {
+            animation.cancel();
+        });
+
+        wheel.style.transition = "none";
+        wheel.style.transform =
+            `rotate(${startRotation}deg)`;
+
+        // Принудительно заставляем WebView применить начальное состояние
+        void wheel.offsetWidth;
+
+        // Настоящая анимация самого колеса
+        const animation = wheel.animate(
+            [
+                {
+                    transform:
+                        `rotate(${startRotation}deg)`
+                },
+                {
+                    transform:
+                        `rotate(${endRotation}deg)`
+                }
+            ],
+            {
+                duration: 6000,
+                easing: "cubic-bezier(0.12, 0.72, 0.08, 1)",
+                fill: "forwards"
             }
+        );
 
+        currentRotation = endRotation;
 
-            const targetSector =
-                findPrizeSector(
-                    finalEmoji
-                );
+        animation.onfinish = () => {
+            currentRotation =
+                ((currentRotation % 360) + 360) % 360;
 
+            wheel.style.transform =
+                `rotate(${currentRotation}deg)`;
 
-            const sectorCenter =
-                targetSector *
-                SECTOR_ANGLE +
-                SECTOR_ANGLE / 2;
+            wheel.style.transition = "none";
 
+            resolve();
+        };
 
-            /*
-             * Сектор должен остановиться
-             * под верхним указателем.
-             */
-
-            const targetAngle =
-                360 -
-                sectorCenter;
-
-
-            /*
-             * 7 полных оборотов.
-             */
-
-            const fullTurns =
-                7 * 360;
-
-
-            const normalized =
-                (
-                    currentRotation % 360 +
-                    360
-                ) % 360;
-
-
-            let delta =
-                fullTurns +
-                targetAngle -
-                normalized;
-
-
-            if (delta < fullTurns) {
-                delta += 360;
-            }
-
-
+        animation.oncancel = () => {
+            resolve();
+        };
+    });
+}
             currentRotation +=
                 delta;
 
