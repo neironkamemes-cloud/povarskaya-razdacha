@@ -2,131 +2,288 @@
     box-sizing: border-box;
 }
 
+html,
 body {
     margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
     min-height: 100vh;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #fff3d6, #ffd6a5);
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    background:
+        linear-gradient(
+            135deg,
+            #fff3d6,
+            #ffd6a5
+        );
+
     color: #3b2415;
+
     display: flex;
     justify-content: center;
     align-items: center;
+
+    overflow-x: hidden;
 }
 
-.container {
+.app {
     width: 100%;
-    max-width: 420px;
-    padding: 25px;
+    max-width: 480px;
+
+    padding: 24px 18px 30px;
+
     text-align: center;
 }
 
-h1 {
-    margin-bottom: 10px;
+.header h1 {
+    margin: 0 0 10px;
+
     font-size: 30px;
+    line-height: 1.2;
 }
 
-.subtitle {
-    margin-bottom: 30px;
+.header p {
+    margin: 0 0 25px;
+
     font-size: 16px;
+    line-height: 1.4;
+}
+
+.roulette-section {
+    width: 100%;
+}
+
+.roulette-wrapper {
+    position: relative;
+
+    width: 300px;
+    height: 300px;
+
+    margin: 0 auto 28px;
 }
 
 .roulette {
-    position: relative;
-    width: 280px;
-    height: 280px;
-    margin: 0 auto 30px;
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 300px;
+    height: 300px;
+
     border-radius: 50%;
-    background: #fff;
+
+    background: white;
+
     border: 8px solid white;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-    overflow: visible;
+
+    box-shadow:
+        0 10px 30px
+        rgba(0, 0, 0, 0.22);
+
+    overflow: hidden;
 }
 
 .roulette-wheel {
     position: absolute;
-    inset: 0;
+
+    left: 0;
+    top: 0;
+
     width: 100%;
     height: 100%;
+
     border-radius: 50%;
-    overflow: hidden;
-    transform-origin: center center;
+
+    transform: rotate(0deg);
+
+    transform-origin: 50% 50%;
+
     will-change: transform;
+
+    z-index: 1;
 }
 
 .roulette-sector {
     position: absolute;
-    width: 50%;
-    height: 50%;
+
     left: 50%;
     top: 50%;
-    transform-origin: 0 0;
+
+    width: 50%;
+    height: 50%;
+
+    margin-left: -25%;
+    margin-top: -25%;
+
     display: flex;
-    align-items: flex-start;
+
+    align-items: center;
     justify-content: center;
-    padding-top: 18px;
-    color: #3b2415;
-    font-size: 22px;
+
+    font-size: 26px;
+
     font-weight: bold;
-    line-height: 1;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.75);
+
+    pointer-events: none;
+
+    user-select: none;
+}
+
+.roulette-center {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 82px;
+    height: 82px;
+
+    transform:
+        translate(-50%, -50%);
+
+    border-radius: 50%;
+
+    background: white;
+
+    border: 5px solid white;
+
+    box-shadow:
+        0 4px 15px
+        rgba(0, 0, 0, 0.28);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 5;
 }
 
 #prize {
-    position: absolute;
-    z-index: 5;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 82px;
-    height: 82px;
-    border-radius: 50%;
-    background: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     font-size: 40px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-    border: 4px solid rgba(255, 255, 255, 0.9);
+
+    line-height: 1;
 }
 
 .pointer {
     position: absolute;
-    top: -28px;
+
     left: 50%;
-    transform: translateX(-50%);
-    font-size: 34px;
+    top: -27px;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 20;
+
+    font-size: 38px;
+
     line-height: 1;
-    z-index: 10;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+
+    color: #e74c3c;
+
+    filter:
+        drop-shadow(
+            0 2px 2px
+            rgba(0, 0, 0, 0.25)
+        );
 }
 
-button {
+.result {
     width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 14px;
-    background: #ff6b35;
-    color: white;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 5px 0 #c94d21;
 }
 
-button:disabled {
+.status {
+    min-height: 25px;
+
+    margin-bottom: 18px;
+
+    font-size: 16px;
+
+    line-height: 1.4;
+}
+
+.spin-button {
+    width: 100%;
+
+    padding: 16px 20px;
+
+    border: none;
+
+    border-radius: 14px;
+
+    background: #ff6b35;
+
+    color: white;
+
+    font-size: 20px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 0 #c94d21;
+
+    transition:
+        transform 0.1s ease,
+        opacity 0.2s ease;
+}
+
+.spin-button:active:not(:disabled) {
+    transform:
+        translateY(3px);
+
+    box-shadow:
+        0 2px 0 #c94d21;
+}
+
+.spin-button:disabled {
     opacity: 0.55;
+
     cursor: not-allowed;
+
     box-shadow: none;
 }
 
-button:active:not(:disabled) {
-    transform: translateY(3px);
-    box-shadow: 0 2px 0 #c94d21;
+.footer {
+    margin-top: 25px;
+
+    font-size: 14px;
+
+    opacity: 0.7;
 }
 
-#status {
-    margin-top: 20px;
-    font-size: 16px;
-    min-height: 24px;
+.footer p {
+    margin: 0;
+}
+
+@media (max-width: 360px) {
+
+    .roulette-wrapper,
+    .roulette {
+        width: 270px;
+        height: 270px;
+    }
+
+    .roulette-center {
+        width: 74px;
+        height: 74px;
+    }
+
+    #prize {
+        font-size: 34px;
+    }
+
+    .roulette-sector {
+        font-size: 23px;
+    }
 }
