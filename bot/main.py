@@ -1,6 +1,7 @@
 import asyncio
 import os
 import random
+import signal
 import sqlite3
 import time
 from pathlib import Path
@@ -73,12 +74,6 @@ def get_db():
 
 
 def init_db():
-    """
-    Создаём таблицу users.
-    Без этой функции приложение не должно обращаться
-    к таблице users.
-    """
-
     conn = get_db()
 
     try:
@@ -99,8 +94,6 @@ def init_db():
 
 
 def get_user(user_id: int):
-    init_db()
-
     conn = get_db()
 
     try:
@@ -118,8 +111,6 @@ def get_user(user_id: int):
 
 
 def save_spin(user_id: int, prize: str):
-    init_db()
-
     conn = get_db()
 
     try:
@@ -162,10 +153,6 @@ def get_remaining(user_id: int) -> int:
     )
 
     return max(0, remaining)
-
-
-def can_spin(user_id: int) -> bool:
-    return get_remaining(user_id) <= 0
 
 
 # =========================================================
@@ -295,10 +282,6 @@ def create_app():
             }
         )
 
-    # -----------------------------------------------------
-    # ROUTES
-    # -----------------------------------------------------
-
     app.router.add_get(
         "/",
         index,
@@ -411,7 +394,6 @@ async def run_web():
 async def main():
     print("Starting application...")
 
-    # База создаётся ДО запуска Telegram и Web API.
     init_db()
 
     print(
@@ -424,16 +406,92 @@ async def main():
 
     runner = await run_web()
 
+    stop_event = asyncio.Event()
+
+    def request_shutdown():
+        print(
+            "Shutdown signal received. "
+            "Stopping Telegram polling..."
+        )
+
+        stop_event.set()
+
+    loop = asyncio.get_running_loop()
+
+    for sig in (
+        signal.SIGTERM,
+        signal.SIGINT,
+    ):
+        try:
+            loop.add_signal_handler(
+                sig,
+                request_shutdown,
+            )
+        except NotImplementedError:
+            pass
+
+    polling_task = None
+
     try:
         print("Bot started")
 
-        await dp.start_polling(
-            bot
+        polling_task = asyncio.create_task(
+            dp.start_polling(
+                bot,
+                handle_signals=False,
+            )
         )
 
+        stop_task = asyncio.create_task(
+            stop_event.wait()
+        )
+
+        done, pending = await asyncio.wait(
+            {
+                polling_task,
+                stop_task,
+            },
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        if stop_task in done:
+            print(
+                "Shutdown requested. "
+                "Stopping polling..."
+            )
+
+            await dp.stop_polling()
+
+            if polling_task:
+                try:
+                    await polling_task
+                except asyncio.CancelledError:
+                    pass
+                except Exception as error:
+                    print(
+                        f"Polling stopped: {error}"
+                    )
+
+        else:
+            for task in pending:
+                task.cancel()
+
+            if polling_task:
+                await polling_task
+
     finally:
+        print("Cleaning up application...")
+
+        try:
+            await dp.stop_polling()
+        except Exception:
+            pass
+
         await runner.cleanup()
+
         await bot.session.close()
+
+        print("Application stopped cleanly")
 
 
 # =========================================================
