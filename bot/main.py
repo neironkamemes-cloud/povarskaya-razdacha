@@ -23,6 +23,7 @@ from aiogram.types import (
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
+
 DB_PATH = BASE_DIR / "povarskaya.db"
 
 
@@ -35,9 +36,6 @@ WEBAPP_URL = os.getenv("WEBAPP_URL", "")
 
 COOLDOWN = 24 * 60 * 60
 
-# Как часто проверяем пользователей на готовность.
-# 60 секунд достаточно, чтобы сообщение пришло почти сразу
-# после окончания 24 часов.
 REMINDER_CHECK_INTERVAL = 60
 
 
@@ -73,38 +71,118 @@ PRIZES = [
 # =========================================================
 
 def get_db():
-    conn = sqlite3.connect(str(DB_PATH))
+    """
+    Всегда открываем именно одну базу.
+    """
+
+    DB_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    conn = sqlite3.connect(
+        str(DB_PATH),
+        timeout=30,
+    )
+
     conn.row_factory = sqlite3.Row
+
     return conn
 
 
-def init_db():
+def ensure_database():
+    """
+    Безопасная миграция.
+
+    Сначала проверяем, существует ли users.
+
+    Если таблицы нет — создаём её.
+
+    Если таблица уже есть — НЕ пересоздаём
+    и НЕ удаляем существующие данные.
+
+    Затем добавляем только reminder_sent,
+    если этой колонки ещё нет.
+    """
+
     conn = get_db()
 
     try:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                last_spin INTEGER NOT NULL DEFAULT 0,
-                prize TEXT NOT NULL DEFAULT '',
-                reminder_sent INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
 
-        # Миграция для существующей базы:
-        # если reminder_sent ещё нет — добавляем колонку.
+        tables = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+            AND name = 'users'
+            """
+        ).fetchone()
+
+
+        if tables is None:
+
+            print(
+                "Database: users table not found. "
+                "Creating it..."
+            )
+
+            conn.execute(
+                """
+                CREATE TABLE users (
+                    user_id INTEGER PRIMARY KEY,
+                    last_spin INTEGER NOT NULL DEFAULT 0,
+                    prize TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
+
+            conn.commit()
+
+
         columns = conn.execute(
-            "PRAGMA table_info(users)"
+            """
+            PRAGMA table_info(users)
+            """
         ).fetchall()
 
+
         column_names = {
-            column["name"]
-            for column in columns
+            row["name"]
+            for row in columns
         }
 
+
+        if "user_id" not in column_names:
+
+            raise RuntimeError(
+                "users table exists, but user_id column is missing"
+            )
+
+
+        if "last_spin" not in column_names:
+
+            raise RuntimeError(
+                "users table exists, but last_spin column is missing"
+            )
+
+
+        if "prize" not in column_names:
+
+            conn.execute(
+                """
+                ALTER TABLE users
+                ADD COLUMN prize TEXT NOT NULL DEFAULT ''
+                """
+            )
+
+            print(
+                "Database migration: "
+                "added prize column"
+            )
+
+
         if "reminder_sent" not in column_names:
+
             conn.execute(
                 """
                 ALTER TABLE users
@@ -112,16 +190,33 @@ def init_db():
                 """
             )
 
+            print(
+                "Database migration: "
+                "added reminder_sent column"
+            )
+
+
         conn.commit()
 
+
+        print(
+            "Database initialized successfully"
+        )
+
+
     finally:
+
         conn.close()
 
 
 def get_user(user_id: int):
+
     conn = get_db()
 
     try:
+
+        ensure_database()
+
         return conn.execute(
             """
             SELECT
@@ -136,73 +231,151 @@ def get_user(user_id: int):
         ).fetchone()
 
     finally:
+
         conn.close()
 
 
-def save_spin(user_id: int, prize: str):
+def save_spin(
+    user_id: int,
+    prize: str,
+):
+
+    ensure_database()
+
     conn = get_db()
 
     try:
-        conn.execute(
-            """
-            INSERT INTO users (
-                user_id,
-                last_spin,
-                prize,
-                reminder_sent
-            )
-            VALUES (?, ?, ?, 0)
 
-            ON CONFLICT(user_id)
-            DO UPDATE SET
-                last_spin = excluded.last_spin,
-                prize = excluded.prize,
-                reminder_sent = 0
+        existing = conn.execute(
+            """
+            SELECT user_id
+            FROM users
+            WHERE user_id = ?
             """,
-            (
-                user_id,
-                int(time.time()),
-                prize,
-            ),
+            (user_id,),
+        ).fetchone()
+
+
+        now = int(
+            time.time()
         )
+
+
+        if existing:
+
+            conn.execute(
+                """
+                UPDATE users
+                SET
+                    last_spin = ?,
+                    prize = ?,
+                    reminder_sent = 0
+                WHERE user_id = ?
+                """,
+                (
+                    now,
+                    prize,
+                    user_id,
+                ),
+            )
+
+        else:
+
+            conn.execute(
+                """
+                INSERT INTO users (
+                    user_id,
+                    last_spin,
+                    prize,
+                    reminder_sent
+                )
+                VALUES (?, ?, ?, 0)
+                """,
+                (
+                    user_id,
+                    now,
+                    prize,
+                ),
+            )
+
 
         conn.commit()
 
+
     finally:
+
         conn.close()
 
 
-def get_remaining(user_id: int) -> int:
-    user = get_user(user_id)
+def get_remaining(
+    user_id: int,
+) -> int:
 
-    if user is None:
-        return 0
-
-    last_spin = int(
-        user["last_spin"] or 0
-    )
-
-    remaining = COOLDOWN - (
-        int(time.time()) - last_spin
-    )
-
-    return max(0, remaining)
-
-
-def get_users_ready_for_reminder():
-    """
-    Возвращает пользователей, у которых:
-
-    1. была предыдущая прокрутка;
-    2. прошло 24 часа;
-    3. напоминание ещё не отправлялось.
-    """
+    ensure_database()
 
     conn = get_db()
 
     try:
-        now = int(time.time())
-        threshold = now - COOLDOWN
+
+        user = conn.execute(
+            """
+            SELECT last_spin
+            FROM users
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+
+
+        if user is None:
+            return 0
+
+
+        last_spin = int(
+            user["last_spin"] or 0
+        )
+
+
+        if last_spin <= 0:
+            return 0
+
+
+        remaining = (
+            COOLDOWN
+            - (
+                int(time.time())
+                - last_spin
+            )
+        )
+
+
+        return max(
+            0,
+            remaining,
+        )
+
+
+    finally:
+
+        conn.close()
+
+
+def get_users_ready_for_reminder():
+
+    ensure_database()
+
+    conn = get_db()
+
+    try:
+
+        now = int(
+            time.time()
+        )
+
+        threshold = (
+            now - COOLDOWN
+        )
+
 
         return conn.execute(
             """
@@ -215,29 +388,43 @@ def get_users_ready_for_reminder():
                 AND last_spin <= ?
                 AND reminder_sent = 0
             """,
-            (threshold,),
+            (
+                threshold,
+            ),
         ).fetchall()
 
+
     finally:
+
         conn.close()
 
 
-def mark_reminder_sent(user_id: int):
+def mark_reminder_sent(
+    user_id: int,
+):
+
+    ensure_database()
+
     conn = get_db()
 
     try:
+
         conn.execute(
             """
             UPDATE users
             SET reminder_sent = 1
             WHERE user_id = ?
             """,
-            (user_id,),
+            (
+                user_id,
+            ),
         )
 
         conn.commit()
 
+
     finally:
+
         conn.close()
 
 
@@ -246,8 +433,10 @@ def mark_reminder_sent(user_id: int):
 # =========================================================
 
 def get_spin_keyboard():
+
     if not WEBAPP_URL:
         return None
+
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -267,34 +456,31 @@ def get_spin_keyboard():
 # REMINDER WORKER
 # =========================================================
 
-async def reminder_worker(bot: Bot):
-    """
-    Постоянно проверяет SQLite.
-
-    Когда человеку снова доступна прокрутка,
-    отправляет одно сообщение.
-
-    После успешной отправки ставит reminder_sent = 1.
-
-    После следующей прокрутки save_spin()
-    автоматически возвращает reminder_sent = 0.
-    """
+async def reminder_worker(
+    bot: Bot,
+):
 
     print(
         "Reminder worker started"
     )
 
+
     while True:
 
         try:
 
-            users = get_users_ready_for_reminder()
+            users = (
+                get_users_ready_for_reminder()
+            )
+
 
             if users:
+
                 print(
-                    f"Reminder worker: "
-                    f"{len(users)} user(s) ready"
+                    "Users ready for reminder:",
+                    len(users),
                 )
+
 
             for user in users:
 
@@ -302,64 +488,82 @@ async def reminder_worker(bot: Bot):
                     user["user_id"]
                 )
 
-                text = (
-                    "🎁 <b>Твоя новая прокрутка доступна!</b>\n\n"
-                    "Прошло 24 часа — можно снова "
-                    "крутить рулетку и попытать удачу. 🎰"
-                )
 
                 try:
 
                     await bot.send_message(
                         chat_id=user_id,
-                        text=text,
+                        text=(
+                            "🎁 <b>Твоя новая "
+                            "прокрутка доступна!</b>\n\n"
+                            "Прошло 24 часа — "
+                            "можно снова крутить "
+                            "рулетку. 🎰"
+                        ),
                         parse_mode="HTML",
-                        reply_markup=get_spin_keyboard(),
+                        reply_markup=(
+                            get_spin_keyboard()
+                        ),
                     )
+
 
                     mark_reminder_sent(
                         user_id
                     )
 
+
                     print(
-                        f"Reminder sent to "
-                        f"{user_id}"
+                        "Reminder sent:",
+                        user_id,
                     )
+
 
                 except Exception as error:
 
-                    # Например, пользователь мог заблокировать бота.
-                    # В таком случае не крутим базу бесконечно.
-                    print(
-                        f"Failed to send reminder "
-                        f"to {user_id}: {error}"
+                    error_text = (
+                        str(error)
+                        .lower()
                     )
 
-                    # Если Telegram говорит, что пользователь
-                    # недоступен, считаем попытку обработанной.
-                    error_text = str(error).lower()
+
+                    print(
+                        f"Reminder error "
+                        f"for {user_id}: "
+                        f"{error}"
+                    )
+
 
                     if (
                         "blocked" in error_text
-                        or "chat not found" in error_text
-                        or "user is deactivated" in error_text
+                        or
+                        "chat not found"
+                        in error_text
+                        or
+                        "user is deactivated"
+                        in error_text
                     ):
+
                         mark_reminder_sent(
                             user_id
                         )
 
+
         except asyncio.CancelledError:
+
             print(
                 "Reminder worker stopped"
             )
+
             raise
+
 
         except Exception as error:
 
             print(
-                f"Reminder worker error: "
-                f"{error}"
+                "Reminder worker error:",
+                error,
             )
+
 
         await asyncio.sleep(
             REMINDER_CHECK_INTERVAL
@@ -371,22 +575,32 @@ async def reminder_worker(bot: Bot):
 # =========================================================
 
 def create_app():
+
     app = web.Application()
 
+
     async def index(request):
-        index_file = WEB_DIR / "index.html"
+
+        index_file = (
+            WEB_DIR / "index.html"
+        )
+
 
         if not index_file.exists():
+
             return web.Response(
                 text="Mini App files not found",
                 status=404,
             )
 
+
         return web.FileResponse(
             index_file
         )
 
+
     async def health(request):
+
         return web.json_response(
             {
                 "status": "ok",
@@ -394,153 +608,222 @@ def create_app():
             }
         )
 
+
     async def static_file(request):
-        filename = request.match_info[
-            "filename"
-        ]
 
-        file_path = WEB_DIR / filename
+        filename = (
+            request.match_info[
+                "filename"
+            ]
+        )
 
-        if not file_path.exists():
+
+        file_path = (
+            WEB_DIR / filename
+        )
+
+
+        if (
+            not file_path.exists()
+            or
+            not file_path.is_file()
+        ):
+
             raise web.HTTPNotFound()
 
-        if not file_path.is_file():
-            raise web.HTTPNotFound()
 
         return web.FileResponse(
             file_path
         )
 
+
     async def user_api(request):
 
         try:
+
             user_id = int(
                 request.match_info[
                     "user_id"
                 ]
             )
 
-        except (TypeError, ValueError):
+        except (
+            TypeError,
+            ValueError,
+        ):
 
             return web.json_response(
                 {
-                    "error": "invalid user_id"
+                    "error":
+                    "invalid user_id"
                 },
                 status=400,
             )
 
-        user = get_user(user_id)
+
+        user = get_user(
+            user_id
+        )
+
 
         if user is None:
 
             return web.json_response(
                 {
-                    "user_id": user_id,
-                    "last_spin": 0,
-                    "prize": "",
-                    "can_spin": True,
-                    "remaining": 0,
+                    "user_id":
+                    user_id,
+                    "last_spin":
+                    0,
+                    "prize":
+                    "",
+                    "can_spin":
+                    True,
+                    "remaining":
+                    0,
                 }
             )
+
 
         remaining = get_remaining(
             user_id
         )
 
+
         return web.json_response(
             {
-                "user_id": user["user_id"],
-                "last_spin": user["last_spin"],
-                "prize": user["prize"],
-                "can_spin": remaining <= 0,
-                "remaining": remaining,
+                "user_id":
+                user["user_id"],
+
+                "last_spin":
+                user["last_spin"],
+
+                "prize":
+                user["prize"],
+
+                "can_spin":
+                remaining <= 0,
+
+                "remaining":
+                remaining,
             }
         )
+
 
     async def spin_api(request):
 
         try:
+
             data = await request.json()
 
         except Exception:
 
             return web.json_response(
                 {
-                    "error": "invalid json"
+                    "error":
+                    "invalid json"
                 },
                 status=400,
             )
 
+
         try:
+
             user_id = int(
-                data.get("user_id")
+                data.get(
+                    "user_id"
+                )
             )
 
-        except (TypeError, ValueError):
+        except (
+            TypeError,
+            ValueError,
+        ):
 
             return web.json_response(
                 {
-                    "error": "invalid user_id"
+                    "error":
+                    "invalid user_id"
                 },
                 status=400,
             )
+
 
         remaining = get_remaining(
             user_id
         )
 
+
         if remaining > 0:
 
             return web.json_response(
                 {
-                    "success": False,
-                    "error": "cooldown",
-                    "remaining": remaining,
+                    "success":
+                    False,
+
+                    "error":
+                    "cooldown",
+
+                    "remaining":
+                    remaining,
                 },
                 status=429,
             )
 
+
         prize = random.choice(
             PRIZES
         )
+
 
         save_spin(
             user_id,
             prize,
         )
 
+
         return web.json_response(
             {
-                "success": True,
-                "prize": prize,
-                "remaining": COOLDOWN,
+                "success":
+                True,
+
+                "prize":
+                prize,
+
+                "remaining":
+                COOLDOWN,
             }
         )
+
 
     app.router.add_get(
         "/",
         index,
     )
 
+
     app.router.add_get(
         "/health",
         health,
     )
+
 
     app.router.add_get(
         "/api/user/{user_id}",
         user_api,
     )
 
+
     app.router.add_post(
         "/api/spin",
         spin_api,
     )
 
+
     app.router.add_get(
         "/{filename:.*\\.(?:css|js|png|jpg|jpeg|gif|svg|ico|webp)}",
         static_file,
     )
+
 
     return app
 
@@ -552,9 +835,11 @@ def create_app():
 dp = Dispatcher()
 
 
-@dp.message(CommandStart())
+@dp.message(
+    CommandStart()
+)
 async def start_handler(
-    message: Message
+    message: Message,
 ):
 
     text = (
@@ -565,7 +850,11 @@ async def start_handler(
         "Крути рулетку и забирай свой приз!"
     )
 
-    keyboard = get_spin_keyboard()
+
+    keyboard = (
+        get_spin_keyboard()
+    )
+
 
     if keyboard:
 
@@ -580,7 +869,8 @@ async def start_handler(
         await message.answer(
             text
             + "\n\n"
-            + "⚠️ WEBAPP_URL пока не настроен."
+            + "⚠️ WEBAPP_URL "
+            "пока не настроен."
         )
 
 
@@ -592,11 +882,14 @@ async def run_web():
 
     app = create_app()
 
+
     runner = web.AppRunner(
         app
     )
 
+
     await runner.setup()
+
 
     port = int(
         os.getenv(
@@ -605,17 +898,22 @@ async def run_web():
         )
     )
 
+
     site = web.TCPSite(
         runner,
         "0.0.0.0",
         port,
     )
 
+
     await site.start()
 
+
     print(
-        f"Web server started on port {port}"
+        f"Web server started "
+        f"on port {port}"
     )
+
 
     return runner
 
@@ -630,31 +928,37 @@ async def main():
         "Starting application..."
     )
 
-    init_db()
 
-    print(
-        f"Database initialized: "
-        f"{DB_PATH}"
-    )
+    # КРИТИЧНО:
+    # база и таблицы создаются
+    # ДО запуска worker и API.
+    ensure_database()
+
 
     bot = Bot(
         token=BOT_TOKEN
     )
 
+
     runner = await run_web()
 
+
     stop_event = asyncio.Event()
+
 
     def request_shutdown():
 
         print(
-            "Shutdown signal received. "
-            "Stopping application..."
+            "Shutdown signal received"
         )
 
         stop_event.set()
 
-    loop = asyncio.get_running_loop()
+
+    loop = (
+        asyncio.get_running_loop()
+    )
+
 
     for sig in (
         signal.SIGTERM,
@@ -669,10 +973,14 @@ async def main():
             )
 
         except NotImplementedError:
+
             pass
+
 
     polling_task = None
     reminder_task = None
+    stop_task = None
+
 
     try:
 
@@ -680,94 +988,131 @@ async def main():
             "Bot started"
         )
 
-        polling_task = asyncio.create_task(
-            dp.start_polling(
-                bot,
-                handle_signals=False,
+
+        polling_task = (
+            asyncio.create_task(
+                dp.start_polling(
+                    bot,
+                    handle_signals=False,
+                )
             )
         )
 
-        reminder_task = asyncio.create_task(
-            reminder_worker(
-                bot
+
+        reminder_task = (
+            asyncio.create_task(
+                reminder_worker(
+                    bot
+                )
             )
         )
 
-        stop_task = asyncio.create_task(
-            stop_event.wait()
+
+        stop_task = (
+            asyncio.create_task(
+                stop_event.wait()
+            )
         )
 
-        done, pending = await asyncio.wait(
-            {
-                polling_task,
-                reminder_task,
-                stop_task,
-            },
-            return_when=asyncio.FIRST_COMPLETED,
+
+        done, pending = (
+            await asyncio.wait(
+                {
+                    polling_task,
+                    reminder_task,
+                    stop_task,
+                },
+                return_when=(
+                    asyncio.FIRST_COMPLETED
+                ),
+            )
         )
+
 
         if stop_task in done:
 
             print(
-                "Shutdown requested."
+                "Shutdown requested"
             )
 
             try:
+
                 await dp.stop_polling()
+
             except Exception:
+
                 pass
+
 
         for task in pending:
 
             task.cancel()
 
+
         for task in pending:
 
             try:
+
                 await task
+
             except asyncio.CancelledError:
+
                 pass
+
             except Exception as error:
 
                 print(
-                    f"Task stopped: {error}"
+                    "Task error:",
+                    error,
                 )
+
 
     finally:
 
         print(
-            "Cleaning up application..."
+            "Cleaning up..."
         )
 
+
         try:
+
             await dp.stop_polling()
+
         except Exception:
+
             pass
 
-        if reminder_task:
 
-            reminder_task.cancel()
+        for task in (
+            reminder_task,
+            polling_task,
+        ):
 
-            try:
-                await reminder_task
-            except asyncio.CancelledError:
-                pass
+            if task:
 
-        if polling_task:
+                task.cancel()
 
-            polling_task.cancel()
+                try:
 
-            try:
-                await polling_task
-            except asyncio.CancelledError:
-                pass
+                    await task
+
+                except asyncio.CancelledError:
+
+                    pass
+
+                except Exception:
+
+                    pass
+
 
         await runner.cleanup()
 
+
         await bot.session.close()
 
+
         print(
-            "Application stopped cleanly"
+            "Application stopped"
         )
 
 
@@ -776,4 +1121,7 @@ async def main():
 # =========================================================
 
 if __name__ == "__main__":
-    asyncio.run(main())
+
+    asyncio.run(
+        main()
+    )
