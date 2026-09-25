@@ -8,17 +8,11 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 
-    <meta
-        name="theme-color"
-        content="#111111"
-    >
+    <meta name="theme-color" content="#111111">
 
     <title>Поварская Раздача</title>
 
-    <link
-        rel="stylesheet"
-        href="style.css?v=4"
-    >
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 
 <body>
@@ -34,16 +28,18 @@
             </p>
         </header>
 
-
         <section class="roulette-section">
 
             <div class="roulette-wrapper">
 
-                <div class="pointer">
-                    ▼
-                </div>
+                <div class="pointer">▼</div>
 
                 <div class="roulette">
+
+                    <div
+                        id="wheel"
+                        class="roulette-wheel"
+                    ></div>
 
                     <div class="roulette-center">
                         <span id="prize">❓</span>
@@ -52,7 +48,6 @@
                 </div>
 
             </div>
-
 
             <div class="result">
 
@@ -75,26 +70,16 @@
 
         </section>
 
-
         <footer class="footer">
-
             <p>
                 ⏰ Одно вращение каждые 24 часа
             </p>
-
         </footer>
 
     </main>
 
-
-    <script
-        src="https://telegram.org/js/telegram-web-app.js"
-    ></script>
-
-    <!-- v4 специально меняем для сброса кэша Telegram -->
-    <script
-        src="app.js?v=4"
-    ></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="app.js?v=5"></script>
 
 </body>
 </html>
