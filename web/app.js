@@ -18,7 +18,7 @@ const userId = tg.initDataUnsafe?.user?.id || 0;
 
 
 // ==========================================
-// 15 СЕКТОРОВ
+// РУЛЕТКА
 // ==========================================
 
 const rouletteItems = [
@@ -44,7 +44,7 @@ const SECTOR_ANGLE = 360 / SECTOR_COUNT;
 
 
 // ==========================================
-// ПРИЗ
+// ЭМОДЗИ ПРИЗА
 // ==========================================
 
 function getPrizeEmoji(prize) {
@@ -57,7 +57,7 @@ function getPrizeEmoji(prize) {
 
 
 // ==========================================
-// ВРЕМЯ
+// ФОРМАТ ВРЕМЕНИ
 // ==========================================
 
 function formatTime(seconds) {
@@ -129,17 +129,15 @@ function startCountdown(seconds) {
 
     update();
 
-    countdownInterval =
-        setInterval(update, 1000);
+    countdownInterval = setInterval(update, 1000);
 }
 
 
 // ==========================================
-// ЦВЕТА КОЛЕСА
+// ГРАДИЕНТ КОЛЕСА
 // ==========================================
 
 function createGradient() {
-
     const colors = [
         "#ff7675",
         "#74b9ff",
@@ -161,12 +159,8 @@ function createGradient() {
     const parts = [];
 
     for (let i = 0; i < SECTOR_COUNT; i++) {
-
-        const start =
-            i * SECTOR_ANGLE;
-
-        const end =
-            (i + 1) * SECTOR_ANGLE;
+        const start = i * SECTOR_ANGLE;
+        const end = (i + 1) * SECTOR_ANGLE;
 
         parts.push(
             `${colors[i]} ${start}deg ${end}deg`
@@ -182,15 +176,13 @@ function createGradient() {
 // ==========================================
 
 function createRouletteWheel() {
-
     if (!rouletteElement) {
+        console.error("Элемент .roulette не найден");
         return;
     }
 
     const oldWheel =
-        rouletteElement.querySelector(
-            ".roulette-wheel"
-        );
+        rouletteElement.querySelector(".roulette-wheel");
 
     if (oldWheel) {
         oldWheel.remove();
@@ -199,117 +191,85 @@ function createRouletteWheel() {
     const wheel =
         document.createElement("div");
 
-    wheel.className =
-        "roulette-wheel";
+    wheel.className = "roulette-wheel";
 
-    wheel.style.position =
-        "absolute";
-
-    wheel.style.inset =
-        "0";
-
-    wheel.style.width =
-        "100%";
-
-    wheel.style.height =
-        "100%";
-
-    wheel.style.borderRadius =
-        "50%";
-
-    wheel.style.overflow =
-        "hidden";
-
-    wheel.style.transformOrigin =
-        "50% 50%";
-
-    wheel.style.background =
-        createGradient();
-
-    wheel.style.willChange =
-        "transform";
-
-    wheel.style.transform =
-        "rotate(0deg)";
-
-    wheel.style.zIndex =
-        "1";
+    wheel.style.position = "absolute";
+    wheel.style.inset = "0";
+    wheel.style.width = "100%";
+    wheel.style.height = "100%";
+    wheel.style.borderRadius = "50%";
+    wheel.style.overflow = "hidden";
+    wheel.style.transformOrigin = "50% 50%";
+    wheel.style.background = createGradient();
+    wheel.style.willChange = "transform";
+    wheel.style.transform = "rotate(0deg)";
+    wheel.style.zIndex = "1";
 
 
-    // ======================================
-    // ЭМОДЗИ ВНУТРИ СЕКТОРОВ
-    // ======================================
+    rouletteItems.forEach((item, index) => {
+        const label =
+            document.createElement("div");
 
-    rouletteItems.forEach(
-        (item, index) => {
+        const angle =
+            index * SECTOR_ANGLE +
+            SECTOR_ANGLE / 2;
 
-            const label =
-                document.createElement("div");
+        label.className =
+            "roulette-sector";
 
-            label.className =
-                "roulette-sector";
+        label.textContent =
+            item;
 
-            label.textContent =
-                item;
+        label.style.position =
+            "absolute";
 
-            const angle =
-                index * SECTOR_ANGLE +
-                SECTOR_ANGLE / 2;
+        label.style.left =
+            "50%";
 
+        label.style.top =
+            "50%";
 
-            label.style.position =
-                "absolute";
+        label.style.width =
+            "44%";
 
-            label.style.left =
-                "50%";
+        label.style.height =
+            "44%";
 
-            label.style.top =
-                "50%";
+        label.style.marginLeft =
+            "-22%";
 
-            label.style.width =
-                "44%";
+        label.style.marginTop =
+            "-22%";
 
-            label.style.height =
-                "44%";
+        label.style.transform =
+            `rotate(${angle}deg) translateY(-92px)`;
 
-            label.style.marginLeft =
-                "-22%";
+        label.style.display =
+            "flex";
 
-            label.style.marginTop =
-                "-22%";
+        label.style.alignItems =
+            "center";
 
-            label.style.transform =
-                `rotate(${angle}deg) translateY(-92px)`;
+        label.style.justifyContent =
+            "center";
 
-            label.style.display =
-                "flex";
+        label.style.fontSize =
+            "24px";
 
-            label.style.alignItems =
-                "center";
+        label.style.fontWeight =
+            "bold";
 
-            label.style.justifyContent =
-                "center";
+        label.style.lineHeight =
+            "1";
 
-            label.style.fontSize =
-                "24px";
+        label.style.pointerEvents =
+            "none";
 
-            label.style.fontWeight =
-                "bold";
+        label.style.zIndex =
+            "2";
 
-            label.style.lineHeight =
-                "1";
-
-            label.style.pointerEvents =
-                "none";
-
-            label.style.zIndex =
-                "2";
-
-            wheel.appendChild(
-                label
-            );
-        }
-    );
+        wheel.appendChild(label);
+    });
 
 
     rouletteElement.insertBefore(
@@ -320,16 +280,14 @@ function createRouletteWheel() {
 
 
 // ==========================================
-// ИЩЕМ СЕКТОР С ПРИЗОМ
+// ПОИСК СЕКТОРА ПРИЗА
 // ==========================================
 
 function findPrizeSector(finalEmoji) {
-
     const indexes = [];
 
     rouletteItems.forEach(
         (item, index) => {
-
             if (item === finalEmoji) {
                 indexes.push(index);
             }
@@ -342,38 +300,49 @@ function findPrizeSector(finalEmoji) {
 
     return indexes[
         Math.floor(
-            Math.random() *
-            indexes.length
+            Math.random() * indexes.length
         )
     ];
 }
 
 
 // ==========================================
-// НАСТОЯЩЕЕ ВРАЩЕНИЕ КОЛЕСА
+// ВРАЩЕНИЕ КОЛЕСА
 // ==========================================
 
 function spinWheel(finalEmoji) {
     return new Promise((resolve) => {
-        const wheel = rouletteElement?.querySelector(".roulette-wheel");
+
+        const wheel =
+            rouletteElement?.querySelector(
+                ".roulette-wheel"
+            );
 
         if (!wheel) {
             resolve();
             return;
         }
 
-        const targetSector = findPrizeSector(finalEmoji);
+        const targetSector =
+            findPrizeSector(finalEmoji);
 
         const sectorCenter =
-            targetSector * SECTOR_ANGLE +
+            targetSector *
+            SECTOR_ANGLE +
             SECTOR_ANGLE / 2;
 
-        const targetAngle = 360 - sectorCenter;
+        const targetAngle =
+            360 -
+            sectorCenter;
 
-        const fullTurns = 7 * 360;
+        const fullTurns =
+            7 * 360;
 
         const current =
-            ((currentRotation % 360) + 360) % 360;
+            (
+                currentRotation % 360 +
+                360
+            ) % 360;
 
         let delta =
             fullTurns +
@@ -384,68 +353,112 @@ function spinWheel(finalEmoji) {
             delta += 360;
         }
 
-        const startRotation = currentRotation;
-        const endRotation = currentRotation + delta;
+        const startRotation =
+            currentRotation;
 
-        // Сбрасываем старую анимацию
-        wheel.getAnimations().forEach(animation => {
-            animation.cancel();
-        });
+        const endRotation =
+            currentRotation + delta;
 
-        wheel.style.transition = "none";
+
+        // Удаляем старые анимации
+
+        if (
+            typeof wheel.getAnimations ===
+            "function"
+        ) {
+            wheel
+                .getAnimations()
+                .forEach(
+                    animation => {
+                        animation.cancel();
+                    }
+                );
+        }
+
+
+        wheel.style.transition =
+            "none";
+
         wheel.style.transform =
             `rotate(${startRotation}deg)`;
 
-        // Принудительно заставляем WebView применить начальное состояние
+
+        // Принудительно применяем
+        // начальное положение
+
         void wheel.offsetWidth;
 
-        // Настоящая анимация самого колеса
-        const animation = wheel.animate(
-            [
-                {
-                    transform:
-                        `rotate(${startRotation}deg)`
-                },
-                {
-                    transform:
-                        `rotate(${endRotation}deg)`
-                }
-            ],
-            {
-                duration: 6000,
-                easing: "cubic-bezier(0.12, 0.72, 0.08, 1)",
-                fill: "forwards"
-            }
-        );
 
-        currentRotation = endRotation;
+        // ======================================
+        // ОСНОВНАЯ АНИМАЦИЯ
+        // ======================================
 
-        animation.onfinish = () => {
+        if (
+            typeof wheel.animate ===
+            "function"
+        ) {
+
+            const animation =
+                wheel.animate(
+                    [
+                        {
+                            transform:
+                                `rotate(${startRotation}deg)`
+                        },
+                        {
+                            transform:
+                                `rotate(${endRotation}deg)`
+                        }
+                    ],
+                    {
+                        duration: 6000,
+                        easing:
+                            "cubic-bezier(0.12, 0.72, 0.08, 1)",
+                        fill: "forwards"
+                    }
+                );
+
+
             currentRotation =
-                ((currentRotation % 360) + 360) % 360;
+                endRotation;
 
-            wheel.style.transform =
-                `rotate(${currentRotation}deg)`;
 
-            wheel.style.transition = "none";
+            animation.onfinish =
+                () => {
 
-            resolve();
-        };
+                    currentRotation =
+                        (
+                            currentRotation % 360 +
+                            360
+                        ) % 360;
 
-        animation.oncancel = () => {
-            resolve();
-        };
-    });
-}
-            /*
-             * ВРАЩАЕМ ИМЕННО ВЕСЬ КРУГ
-             */
+                    wheel.style.transform =
+                        `rotate(${currentRotation}deg)`;
+
+                    wheel.style.transition =
+                        "none";
+
+                    resolve();
+                };
+
+
+            animation.oncancel =
+                () => {
+                    resolve();
+                };
+
+        } else {
+
+            // Запасной вариант
 
             wheel.style.transition =
                 "transform 6s cubic-bezier(0.12, 0.72, 0.08, 1)";
 
             wheel.style.transform =
-                `rotate(${currentRotation}deg)`;
+                `rotate(${endRotation}deg)`;
+
+            currentRotation =
+                endRotation;
 
 
             setTimeout(
@@ -457,13 +470,11 @@ function spinWheel(finalEmoji) {
                             360
                         ) % 360;
 
-
                     wheel.style.transition =
                         "none";
 
                     wheel.style.transform =
                         `rotate(${currentRotation}deg)`;
-
 
                     resolve();
 
@@ -471,7 +482,7 @@ function spinWheel(finalEmoji) {
                 6200
             );
         }
-    );
+    });
 }
 
 
@@ -491,28 +502,22 @@ async function loadUserState() {
         return;
     }
 
-
     try {
 
         const response =
             await fetch(
                 "/api/user/" +
-                encodeURIComponent(
-                    userId
-                )
+                encodeURIComponent(userId)
             );
-
 
         const data =
             await response.json();
-
 
         if (!response.ok) {
             throw new Error(
                 "Ошибка получения состояния"
             );
         }
-
 
         if (data.last_spin) {
 
@@ -521,16 +526,12 @@ async function loadUserState() {
                     Date.now() / 1000
                 );
 
-
             const remaining =
                 COOLDOWN -
                 (
                     now -
-                    Number(
-                        data.last_spin
-                    )
+                    Number(data.last_spin)
                 );
-
 
             if (remaining > 0) {
 
@@ -542,7 +543,6 @@ async function loadUserState() {
                         );
                 }
 
-
                 startCountdown(
                     remaining
                 );
@@ -550,7 +550,6 @@ async function loadUserState() {
                 return;
             }
         }
-
 
         enableSpin();
 
@@ -560,7 +559,10 @@ async function loadUserState() {
     }
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "Ошибка загрузки:",
+            error
+        );
 
         statusElement.textContent =
             "⚠️ Не удалось загрузить данные.";
@@ -582,15 +584,12 @@ spinButton.addEventListener(
             return;
         }
 
-
         spinning = true;
 
         disableSpin();
 
-
         statusElement.textContent =
             "🎰 Рулетка крутится...";
-
 
         try {
 
@@ -606,19 +605,17 @@ spinButton.addEventListener(
                         },
 
                         body: JSON.stringify({
-                            user_id: userId
+                            user_id:
+                                userId
                         })
                     }
                 );
-
 
             const data =
                 await response.json();
 
 
-            // ==================================
-            // КУЛДАУН
-            // ==================================
+            // Кулдаун
 
             if (!response.ok) {
 
@@ -628,8 +625,7 @@ spinButton.addEventListener(
                         data.remaining
                     );
 
-                }
-                else {
+                } else {
 
                     statusElement.textContent =
                         data.error ||
@@ -638,21 +634,17 @@ spinButton.addEventListener(
                     enableSpin();
                 }
 
-
                 spinning = false;
 
                 return;
             }
 
 
-            // ==================================
-            // ПРИЗ С СЕРВЕРА
-            // ==================================
+            // Результат сервера
 
             const prize =
                 data.prize ||
                 "❌ Ничего";
-
 
             const finalEmoji =
                 getPrizeEmoji(
@@ -660,18 +652,14 @@ spinButton.addEventListener(
                 );
 
 
-            // ==================================
-            // ЗАПУСК ВРАЩЕНИЯ
-            // ==================================
+            // Вращение
 
             await spinWheel(
                 finalEmoji
             );
 
 
-            // ==================================
-            // РЕЗУЛЬТАТ
-            // ==================================
+            // Показываем результат
 
             prizeElement.textContent =
                 finalEmoji;
@@ -686,17 +674,14 @@ spinButton.addEventListener(
                 statusElement.textContent =
                     "🎉 Тебе выпал Медведь! 🐻";
 
-            }
-            else {
+            } else {
 
                 statusElement.textContent =
                     "😔 Увы, в этот раз ничего.";
             }
 
 
-            // ==================================
-            // КУЛДАУН
-            // ==================================
+            // Кулдаун
 
             startCountdown(
                 data.remaining ||
@@ -706,14 +691,16 @@ spinButton.addEventListener(
         }
         catch (error) {
 
-            console.error(error);
+            console.error(
+                "Ошибка прокрутки:",
+                error
+            );
 
             statusElement.textContent =
                 "⚠️ Ошибка соединения с сервером.";
 
             enableSpin();
         }
-
 
         spinning = false;
     }
