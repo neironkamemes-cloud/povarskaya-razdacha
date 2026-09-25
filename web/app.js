@@ -3,39 +3,112 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
+const wheel = document.getElementById("wheel");
 const spinButton = document.getElementById("spinButton");
 const prizeElement = document.getElementById("prize");
 const statusElement = document.getElementById("status");
-const rouletteElement = document.querySelector(".roulette");
 
 const COOLDOWN = 24 * 60 * 60;
 
-const rouletteItems = [
+const prizes = [
     "❌", "❌", "❌", "❌", "❌",
     "❌", "❌", "🐻", "❌", "❌",
     "❌", "❌", "❌", "❌", "❌"
 ];
 
-const SECTOR_COUNT = rouletteItems.length;
-const SECTOR_ANGLE = 360 / SECTOR_COUNT;
+const colors = [
+    "#ff7675", "#74b9ff", "#55efc4", "#ffeaa7",
+    "#a29bfe", "#fd79a8", "#81ecec", "#fab1a0",
+    "#70a1ff", "#7bed9f", "#eccc68", "#ff6b81",
+    "#70a1ff", "#7bed9f", "#ff9ff3"
+];
 
+let rotation = 0;
 let spinning = false;
-let currentRotation = 0;
-let countdownInterval = null;
+let countdownTimer = null;
 
-const userId = tg.initDataUnsafe?.user?.id || 0;
+const userId =
+    tg.initDataUnsafe?.user?.id || 0;
 
 
-// =========================================================
-// HELPERS
-// =========================================================
+// ======================================================
+// СОЗДАНИЕ КОЛЕСА
+// ======================================================
+
+function buildWheel() {
+    if (!wheel) {
+        console.error("Wheel element not found");
+        return;
+    }
+
+    const sectorAngle = 360 / prizes.length;
+
+    const gradient = prizes
+        .map((_, index) => {
+            const start = index * sectorAngle;
+            const end = (index + 1) * sectorAngle;
+
+            return `${colors[index]} ${start}deg ${end}deg`;
+        })
+        .join(", ");
+
+    wheel.style.background =
+        `conic-gradient(${gradient})`;
+
+    wheel.innerHTML = "";
+
+    prizes.forEach((emoji, index) => {
+        const sector =
+            document.createElement("div");
+
+        sector.className =
+            "roulette-sector";
+
+        sector.textContent =
+            emoji;
+
+        const angle =
+            index * sectorAngle +
+            sectorAngle / 2;
+
+        sector.style.transform =
+            `rotate(${angle}deg) translateY(-92px)`;
+
+        wheel.appendChild(sector);
+    });
+}
+
+
+// ======================================================
+// КНОПКА
+// ======================================================
+
+function enableButton() {
+    spinButton.disabled = false;
+    spinButton.textContent = "🎰 КРУТИТЬ";
+}
+
+function disableButton(text) {
+    spinButton.disabled = true;
+    spinButton.textContent = text;
+}
+
+
+// ======================================================
+// ТАЙМЕР
+// ======================================================
 
 function formatTime(seconds) {
     seconds = Math.max(0, Math.floor(seconds));
 
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const hours =
+        Math.floor(seconds / 3600);
+
+    const minutes =
+        Math.floor((seconds % 3600) / 60);
+
+    const secs =
+        seconds % 60;
 
     return (
         String(hours).padStart(2, "0") +
@@ -47,48 +120,24 @@ function formatTime(seconds) {
 }
 
 
-function getPrizeEmoji(prize) {
-    if (prize && String(prize).includes("🐻")) {
-        return "🐻";
-    }
-
-    return "❌";
-}
-
-
-function disableSpin(text = "⏳ Крутим...") {
-    spinButton.disabled = true;
-    spinButton.textContent = text;
-}
-
-
-function enableSpin() {
-    spinButton.disabled = false;
-    spinButton.textContent = "🎰 КРУТИТЬ";
-}
-
-
-// =========================================================
-// COUNTDOWN
-// =========================================================
-
 function startCountdown(seconds) {
-    clearInterval(countdownInterval);
+    clearInterval(countdownTimer);
 
-    let remaining = Math.max(0, Math.floor(seconds));
+    let remaining =
+        Math.max(0, Math.floor(seconds));
 
     if (remaining <= 0) {
-        enableSpin();
+        enableButton();
         return;
     }
 
-    disableSpin("⏳ Ожидание...");
+    disableButton("⏳ Ожидание...");
 
-    function update() {
+    function tick() {
         if (remaining <= 0) {
-            clearInterval(countdownInterval);
+            clearInterval(countdownTimer);
 
-            enableSpin();
+            enableButton();
 
             statusElement.textContent =
                 "🎁 Прокрутка снова доступна!";
@@ -103,217 +152,100 @@ function startCountdown(seconds) {
         remaining--;
     }
 
-    update();
+    tick();
 
-    countdownInterval = setInterval(update, 1000);
+    countdownTimer =
+        setInterval(tick, 1000);
 }
 
 
-// =========================================================
-// WHEEL
-// =========================================================
+// ======================================================
+// РЕЗУЛЬТАТ
+// ======================================================
 
-function createWheel() {
-    if (!rouletteElement) {
-        console.error("roulette element not found");
-        return null;
-    }
+function getPrizeEmoji(prize) {
+    return String(prize).includes("🐻")
+        ? "🐻"
+        : "❌";
+}
 
-    const oldWheel =
-        rouletteElement.querySelector(".roulette-wheel");
 
-    if (oldWheel) {
-        oldWheel.remove();
-    }
+function getPrizeSector(emoji) {
+    const available = [];
 
-    const wheel =
-        document.createElement("div");
-
-    wheel.className = "roulette-wheel";
-
-    wheel.style.position = "absolute";
-    wheel.style.inset = "0";
-    wheel.style.width = "100%";
-    wheel.style.height = "100%";
-    wheel.style.borderRadius = "50%";
-    wheel.style.overflow = "hidden";
-    wheel.style.transformOrigin = "50% 50%";
-    wheel.style.transform = "rotate(0deg)";
-    wheel.style.transition = "none";
-    wheel.style.zIndex = "1";
-
-    const colors = [
-        "#ff7675",
-        "#74b9ff",
-        "#55efc4",
-        "#ffeaa7",
-        "#a29bfe",
-        "#fd79a8",
-        "#81ecec",
-        "#fab1a0",
-        "#70a1ff",
-        "#7bed9f",
-        "#eccc68",
-        "#ff6b81",
-        "#70a1ff",
-        "#7bed9f",
-        "#ff9ff3"
-    ];
-
-    const gradientParts = [];
-
-    for (let i = 0; i < SECTOR_COUNT; i++) {
-        gradientParts.push(
-            `${colors[i]} ${i * SECTOR_ANGLE}deg ${(i + 1) * SECTOR_ANGLE}deg`
-        );
-    }
-
-    wheel.style.background =
-        `conic-gradient(${gradientParts.join(",")})`;
-
-    rouletteItems.forEach((item, index) => {
-        const label =
-            document.createElement("div");
-
-        const angle =
-            index * SECTOR_ANGLE +
-            SECTOR_ANGLE / 2;
-
-        label.className =
-            "roulette-sector";
-
-        label.textContent = item;
-
-        label.style.position = "absolute";
-        label.style.left = "50%";
-        label.style.top = "50%";
-        label.style.width = "44%";
-        label.style.height = "44%";
-        label.style.marginLeft = "-22%";
-        label.style.marginTop = "-22%";
-
-        label.style.display = "flex";
-        label.style.alignItems = "center";
-        label.style.justifyContent = "center";
-
-        label.style.fontSize = "24px";
-        label.style.fontWeight = "bold";
-
-        label.style.pointerEvents = "none";
-
-        label.style.transform =
-            `rotate(${angle}deg) translateY(-92px)`;
-
-        wheel.appendChild(label);
+    prizes.forEach((item, index) => {
+        if (item === emoji) {
+            available.push(index);
+        }
     });
 
-    rouletteElement.insertBefore(
-        wheel,
-        rouletteElement.firstChild
-    );
-
-    return wheel;
-}
-
-
-// =========================================================
-// FIND PRIZE
-// =========================================================
-
-function findPrizeSector(emoji) {
-    const indexes = [];
-
-    rouletteItems.forEach(
-        (item, index) => {
-            if (item === emoji) {
-                indexes.push(index);
-            }
-        }
-    );
-
-    if (indexes.length === 0) {
+    if (!available.length) {
         return 0;
     }
 
-    return indexes[
+    return available[
         Math.floor(
-            Math.random() * indexes.length
+            Math.random() * available.length
         )
     ];
 }
 
 
-// =========================================================
-// SPIN
-// =========================================================
+// ======================================================
+// ВРАЩЕНИЕ
+// ======================================================
 
-function spinWheel(finalEmoji) {
+function spinWheel(emoji) {
     return new Promise(resolve => {
-        const wheel =
-            rouletteElement?.querySelector(
-                ".roulette-wheel"
-            );
-
         if (!wheel) {
             resolve();
             return;
         }
 
+        const sectorAngle =
+            360 / prizes.length;
+
         const targetSector =
-            findPrizeSector(finalEmoji);
+            getPrizeSector(emoji);
 
-        const sectorCenter =
-            targetSector * SECTOR_ANGLE +
-            SECTOR_ANGLE / 2;
+        const targetCenter =
+            targetSector * sectorAngle +
+            sectorAngle / 2;
 
-        /*
-         * Верхняя точка колеса = указатель.
-         * Поэтому крутим до нужного сектора.
-         */
+        const targetAngle =
+            360 - targetCenter;
 
-        const targetRotation =
-            360 - sectorCenter;
+        const currentAngle =
+            ((rotation % 360) + 360) % 360;
 
-        const normalizedCurrent =
-            ((currentRotation % 360) + 360) % 360;
+        const correction =
+            (targetAngle -
+                currentAngle +
+                360) % 360;
 
-        const additionalRotation =
-            (
-                targetRotation -
-                normalizedCurrent +
-                360
-            ) % 360;
+        const finalRotation =
+            rotation +
+            (8 * 360) +
+            correction;
 
-        // 7 полных оборотов + точное попадание
-        const totalRotation =
-            7 * 360 +
-            additionalRotation;
-
-        const startRotation =
-            currentRotation;
-
-        const endRotation =
-            startRotation +
-            totalRotation;
-
-        // Начальное положение
+        // Важно: сначала фиксируем текущее положение
         wheel.style.transition = "none";
 
         wheel.style.transform =
-            `rotate(${startRotation}deg)`;
+            `rotate(${rotation}deg)`;
 
-        // Принудительно применяем начальное состояние
+        // Принудительно применяем состояние
         void wheel.offsetWidth;
 
-        // Реальное вращение
+        // Затем запускаем настоящее CSS-вращение
         wheel.style.transition =
             "transform 6s cubic-bezier(0.12, 0.72, 0.08, 1)";
 
         wheel.style.transform =
-            `rotate(${endRotation}deg)`;
+            `rotate(${finalRotation}deg)`;
 
-        currentRotation =
-            endRotation;
+        rotation =
+            finalRotation;
 
         let finished = false;
 
@@ -329,23 +261,13 @@ function spinWheel(finalEmoji) {
                 finish
             );
 
-            currentRotation =
-                ((endRotation % 360) + 360) % 360;
-
-            wheel.style.transition = "none";
-
-            wheel.style.transform =
-                `rotate(${currentRotation}deg)`;
-
             resolve();
         }
 
         wheel.addEventListener(
             "transitionend",
             finish,
-            {
-                once: true
-            }
+            { once: true }
         );
 
         // Запасной вариант для Telegram WebView
@@ -357,16 +279,16 @@ function spinWheel(finalEmoji) {
 }
 
 
-// =========================================================
-// LOAD USER
-// =========================================================
+// ======================================================
+// ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ
+// ======================================================
 
-async function loadUserState() {
+async function loadUser() {
     if (!userId) {
         statusElement.textContent =
             "⚠️ Не удалось определить пользователя Telegram.";
 
-        disableSpin();
+        disableButton("Недоступно");
 
         return;
     }
@@ -382,7 +304,7 @@ async function loadUserState() {
 
         if (!response.ok) {
             throw new Error(
-                "Ошибка получения пользователя"
+                "Ошибка получения данных пользователя"
             );
         }
 
@@ -399,7 +321,7 @@ async function loadUserState() {
             return;
         }
 
-        enableSpin();
+        enableButton();
 
         statusElement.textContent =
             "🎁 Твоя прокрутка доступна!";
@@ -410,14 +332,14 @@ async function loadUserState() {
         statusElement.textContent =
             "⚠️ Не удалось загрузить данные.";
 
-        enableSpin();
+        enableButton();
     }
 }
 
 
-// =========================================================
-// SPIN BUTTON
-// =========================================================
+// ======================================================
+// НАЖАТИЕ КНОПКИ
+// ======================================================
 
 spinButton.addEventListener(
     "click",
@@ -436,7 +358,7 @@ spinButton.addEventListener(
 
         spinning = true;
 
-        disableSpin();
+        disableButton("🎰 Крутим...");
 
         statusElement.textContent =
             "🎰 Рулетка крутится...";
@@ -453,9 +375,11 @@ spinButton.addEventListener(
                                 "application/json"
                         },
 
-                        body: JSON.stringify({
-                            user_id: userId
-                        })
+                        body:
+                            JSON.stringify({
+                                user_id:
+                                    userId
+                            })
                     }
                 );
 
@@ -463,16 +387,16 @@ spinButton.addEventListener(
                 await response.json();
 
             if (!response.ok) {
-
                 if (data.remaining) {
                     startCountdown(
                         data.remaining
                     );
                 } else {
                     statusElement.textContent =
+                        data.error ||
                         "⚠️ Не удалось прокрутить рулетку.";
 
-                    enableSpin();
+                    enableButton();
                 }
 
                 spinning = false;
@@ -484,24 +408,18 @@ spinButton.addEventListener(
                 data.prize ||
                 "❌ Ничего";
 
-            const finalEmoji =
+            const emoji =
                 getPrizeEmoji(prize);
 
-            /*
-             * Сначала настоящее вращение.
-             * Только после окончания показываем результат.
-             */
+            // СНАЧАЛА крутим колесо
+            await spinWheel(emoji);
 
-            await spinWheel(
-                finalEmoji
-            );
-
+            // И ТОЛЬКО после остановки
+            // меняем центральный результат
             prizeElement.textContent =
-                finalEmoji;
+                emoji;
 
-            if (
-                String(prize).includes("🐻")
-            ) {
+            if (emoji === "🐻") {
                 statusElement.textContent =
                     "🎉 Тебе выпал Медведь! 🐻";
             } else {
@@ -515,13 +433,12 @@ spinButton.addEventListener(
             );
 
         } catch (error) {
-
             console.error(error);
 
             statusElement.textContent =
                 "⚠️ Ошибка соединения с сервером.";
 
-            enableSpin();
+            enableButton();
         }
 
         spinning = false;
@@ -529,10 +446,9 @@ spinButton.addEventListener(
 );
 
 
-// =========================================================
-// START
-// =========================================================
+// ======================================================
+// ЗАПУСК
+// ======================================================
 
-createWheel();
-
-loadUserState();
+buildWheel();
+loadUser();
