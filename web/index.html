@@ -8,11 +8,17 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 
-    <meta name="theme-color" content="#111111">
+    <meta
+        name="theme-color"
+        content="#111111"
+    >
 
     <title>Поварская Раздача</title>
 
-    <link rel="stylesheet" href="style.css?v=5">
+    <link
+        rel="stylesheet"
+        href="style.css?v=6"
+    >
 </head>
 
 <body>
@@ -20,19 +26,27 @@
     <main class="app">
 
         <header class="header">
-            <h1>👨‍🍳 Поварская Раздача</h1>
+
+            <h1>
+                👨‍🍳 Поварская Раздача
+            </h1>
 
             <p>
                 Крути рулетку и узнай,
                 что тебе сегодня выпало!
             </p>
+
         </header>
+
 
         <section class="roulette-section">
 
             <div class="roulette-wrapper">
 
-                <div class="pointer">▼</div>
+                <div class="pointer">
+                    ▼
+                </div>
+
 
                 <div class="roulette">
 
@@ -41,13 +55,19 @@
                         class="roulette-wheel"
                     ></div>
 
+
                     <div class="roulette-center">
-                        <span id="prize">❓</span>
+
+                        <span id="prize">
+                            ❓
+                        </span>
+
                     </div>
 
                 </div>
 
             </div>
+
 
             <div class="result">
 
@@ -57,6 +77,7 @@
                 >
                     🎁 Твоя прокрутка доступна!
                 </div>
+
 
                 <button
                     id="spinButton"
@@ -70,16 +91,30 @@
 
         </section>
 
+
         <footer class="footer">
+
             <p>
                 ⏰ Одно вращение каждые 24 часа
             </p>
+
         </footer>
 
     </main>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="app.js?v=5"></script>
+
+    <!-- Telegram Mini App API -->
+
+    <script
+        src="https://telegram.org/js/telegram-web-app.js"
+    ></script>
+
+
+    <!-- Наш JavaScript -->
+
+    <script
+        src="app.js?v=6"
+    ></script>
 
 </body>
 </html>
