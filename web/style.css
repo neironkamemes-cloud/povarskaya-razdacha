@@ -13,16 +13,13 @@ body {
 body {
     min-height: 100vh;
 
-    font-family:
-        Arial,
-        sans-serif;
+    font-family: Arial, sans-serif;
 
-    background:
-        linear-gradient(
-            135deg,
-            #fff3d6,
-            #ffd6a5
-        );
+    background: linear-gradient(
+        135deg,
+        #fff3d6,
+        #ffd6a5
+    );
 
     color: #3b2415;
 
@@ -80,13 +77,12 @@ body {
 
     border-radius: 50%;
 
-    background: white;
+    background: #fff;
 
-    border: 8px solid white;
+    border: 8px solid #fff;
 
     box-shadow:
-        0 10px 30px
-        rgba(0, 0, 0, 0.22);
+        0 10px 30px rgba(0, 0, 0, 0.22);
 
     overflow: hidden;
 }
@@ -103,12 +99,36 @@ body {
     border-radius: 50%;
 
     transform: rotate(0deg);
-
     transform-origin: 50% 50%;
 
     will-change: transform;
 
     z-index: 1;
+
+    /*
+     * Очень важно:
+     * CSS animation будет применяться
+     * непосредственно к самому колесу.
+     */
+    animation: none;
+}
+
+.roulette-wheel.spinning {
+    animation:
+        roulette-spin
+        6s
+        cubic-bezier(0.12, 0.72, 0.08, 1)
+        forwards;
+}
+
+@keyframes roulette-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(2880deg);
+    }
 }
 
 .roulette-sector {
@@ -133,8 +153,9 @@ body {
     font-weight: bold;
 
     pointer-events: none;
-
     user-select: none;
+
+    z-index: 2;
 }
 
 .roulette-center {
@@ -151,13 +172,12 @@ body {
 
     border-radius: 50%;
 
-    background: white;
+    background: #fff;
 
-    border: 5px solid white;
+    border: 5px solid #fff;
 
     box-shadow:
-        0 4px 15px
-        rgba(0, 0, 0, 0.28);
+        0 4px 15px rgba(0, 0, 0, 0.28);
 
     display: flex;
 
@@ -222,7 +242,7 @@ body {
 
     background: #ff6b35;
 
-    color: white;
+    color: #fff;
 
     font-size: 20px;
 
