@@ -2,31 +2,99 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <meta
+        name="theme-color"
+        content="#111111"
+    >
+
     <title>Поварская Раздача</title>
-    <link rel="stylesheet" href="style.css?v=3">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <link
+        rel="stylesheet"
+        href="style.css?v=4"
+    >
 </head>
+
 <body>
 
-    <div class="container">
-        <h1>🍳 Поварская Раздача</h1>
+    <main class="app">
 
-        <p class="subtitle">Испытай удачу и получи свой приз!</p>
+        <header class="header">
+            <h1>👨‍🍳 Поварская Раздача</h1>
 
-        <div class="roulette">
-            <div class="pointer">▼</div>
-            <div id="prize">🎁</div>
-        </div>
+            <p>
+                Крути рулетку и узнай,
+                что тебе сегодня выпало!
+            </p>
+        </header>
 
-        <button id="spinButton">🎰 КРУТИТЬ</button>
 
-        <div class="info">
-            <p>🎁 Бесплатная попытка — раз в 24 часа</p>
-            <p id="status">Готов к раздаче!</p>
-        </div>
-    </div>
+        <section class="roulette-section">
 
-    <script src="app.js?v=3"></script>
+            <div class="roulette-wrapper">
+
+                <div class="pointer">
+                    ▼
+                </div>
+
+                <div class="roulette">
+
+                    <div class="roulette-center">
+                        <span id="prize">❓</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="result">
+
+                <div
+                    id="status"
+                    class="status"
+                >
+                    🎁 Твоя прокрутка доступна!
+                </div>
+
+                <button
+                    id="spinButton"
+                    class="spin-button"
+                    type="button"
+                >
+                    🎰 КРУТИТЬ
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <footer class="footer">
+
+            <p>
+                ⏰ Одно вращение каждые 24 часа
+            </p>
+
+        </footer>
+
+    </main>
+
+
+    <script
+        src="https://telegram.org/js/telegram-web-app.js"
+    ></script>
+
+    <!-- v4 специально меняем для сброса кэша Telegram -->
+    <script
+        src="app.js?v=4"
+    ></script>
+
 </body>
 </html>
