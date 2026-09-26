@@ -879,8 +879,4 @@ def register_admin_handlers(
         admin_text_handler,
         lambda message: (
             is_admin(message.from_user.id)
-            and message.from_user.id in ADMIN_STATE
-            and message.text
-            and not message.text.startswith("/")
-        ),
-    )
+            and message.from_user
