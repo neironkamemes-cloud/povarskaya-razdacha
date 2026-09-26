@@ -550,6 +550,9 @@ def create_app():
 # =========================================================
 
 dp = Dispatcher()
+from admin import register_admin_handlers
+
+register_admin_handlers(dp)
 
 
 @dp.message(CommandStart())
