@@ -880,5 +880,7 @@ dp.message.register(
     lambda message: (
         is_admin(message.from_user.id)
         and message.from_user.id in ADMIN_STATE
+        and message.text
+        and not message.text.startswith("/")
     ),
 )
