@@ -875,6 +875,10 @@ def register_admin_handlers(
         F.data == "admin:broadcast",
     )
 
-    dp.message.register(
-        admin_text_handler,
-        )
+dp.message.register(
+    admin_text_handler,
+    lambda message: (
+        is_admin(message.from_user.id)
+        and message.from_user.id in ADMIN_STATE
+    ),
+)
